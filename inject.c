@@ -44,6 +44,22 @@ void showVersion() {
 }
 
 
+// handle signals gracefully
+void handleSignal(int sig) {
+    printf("\nCaught signal %d, detaching from the target process...\n", sig);
+    // Detach safely from the target process
+    exit(EXIT_FAILURE);
+}
+
+
+// verify if a process with the given PID exists
+int isProcessRunning(pid_t pid) {
+    char path[256];
+    snprintf(path, sizeof(path), "/proc/%d", pid);
+    return access(path, F_OK) == 0;
+}
+
+
 // attach to a process and inject a syscall
 void injectSyscall(pid_t targetPid, long syscallNumber) {
     struct user_regs_struct regs, original_regs;
@@ -72,6 +88,10 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
     CHECKERROR(ptrace(PTRACE_SYSCALL, targetPid, NULL, NULL) == -1, "PTRACE_SYSCALL");
     waitpid(targetPid, &status, 0);
 
+    // get the return value from the syscall
+    CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
+    printf("Syscall return value: %ld\n", regs.rax);
+
     // restore the original registers
     CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &original_regs) == -1, "PTRACE_SETREGS");
 
@@ -87,6 +107,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: inject [options] <pid> <syscall_number>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    // handle signals
+    signal(SIGINT, handleSignal);
 
     // call help function
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
@@ -104,18 +127,21 @@ int main(int argc, char *argv[]) {
     }
 
     // parse pid and syscall number
-    pid_t targetPid = atoi(argv[1]);
-    long syscallNumber = atol(argv[2]);
-
-    // check to see if pid is less than 0
-    if (targetPid <= 0) {
+    char *endptr;
+    pid_t targetPid = strtol(argv[1], &endptr, 10);
+    if (*endptr != '\0') {
         fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid PID: %s\n", argv[1]);
         exit(EXIT_FAILURE);
     }
-
-    // check to see if syscall number is greater than 0 and less than 456
-    if (syscallNumber <= 0 || syscallNumber >= 456) {
+    long syscallNumber = strtol(argv[2], &endptr, 10);
+    if (*endptr != '\0' || syscallNumber <= 0 || syscallNumber >= 456) {
         fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %s\n", argv[2]);
+        exit(EXIT_FAILURE);
+    }
+
+    // check if the target process exists
+    if (!isProcessRunning(targetPid)) {
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Target process with PID %d does not exist.\n", targetPid);
         exit(EXIT_FAILURE);
     }
 
