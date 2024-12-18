@@ -18,17 +18,20 @@ Compile and Install
 
 Quick Start
 -----------
-    $ sudo ./inject <pid> <syscall #>
+    $ inject [-h] [-v] [<PID> <SYSCALL>]
 
 
 Options
 -------
+    -h, --help              show this help message
+    -v, --version           display version information
 
 
 Uninstall
 ---------
     $ cd ./syscall-injector
     $ sudo make uninstall
+
 
 Linux Syscall Table
 -------------------
@@ -421,6 +424,7 @@ Linux Syscall Table
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
     See './LICENSE' for more information.
+
 
 ## Original author
 
