@@ -13,12 +13,22 @@
 #define CHECKERROR(cond, msg) \
     if (cond) { perror(msg); exit(EXIT_FAILURE); }
 
-// Display version information
-void showVersion() {
-    printf("Syscall Injector Version 1.0\n");
-    printf("Copyright (C) 2024 YourName. All rights reserved.\n");
+
+// display help information
+void showHelp() {
+    printf("Usage: inject [-h] [-v] [pid syscall]\n");
+    printf("-h, --help              show this help message\n");
+    printf("-v, --version           display version information\n");
     exit(EXIT_SUCCESS);
 }
+
+// display version information
+void showVersion() {
+    printf("Linux Syscall Injector Version 1.0\n");
+    printf("Licensed under the terms of the GNU General Public License.\n");
+    exit(EXIT_SUCCESS);
+}
+
 
 // attach to a process and inject a syscall
 void injectSyscall(pid_t targetPid, long syscallNumber) {
@@ -56,19 +66,25 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
     printf("[+] Detached from process %d\n", targetPid);
 }
 
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <pid> <syscallNumber> | -v\n", argv[0]);
+        fprintf(stderr, "Usage: inject [-h] [-v] [pid syscall]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    // Handle the -v flag for version information
-    if (strcmp(argv[1], "-v") == 0) {
+    // call help function
+    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+        showHelp();
+    }
+
+    // call version function
+    if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
         showVersion();
     }
 
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <pid> <syscallNumber>\n", argv[0]);
+        fprintf(stderr, "Usage: inject [-h] [-v] [pid syscall]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
