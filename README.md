@@ -18,7 +18,7 @@ Compile and Install
 
 Quick Start
 -----------
-    $ inject [-h] [-v]
+    $ ./inject <pid> <syscall_number>
 
 
 Options
