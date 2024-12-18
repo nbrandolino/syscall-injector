@@ -28,7 +28,7 @@ Options
 Linux Syscall Table
 -------------------
 | **Syscall Number** | **Name**                | **Entry Point**             |
-|:------------------:|:-----------------------:|:---------------------------:|
+|--------------------|-------------------------|-----------------------------|
 | 0                  | read                    | sys_read                    |
 | 1                  | write                   | sys_write                   |
 | 2                  | open                    | sys_open                    |
@@ -397,7 +397,6 @@ Linux Syscall Table
 | 454                | futex_wake              | sys_futex_wake              |
 | 455                | futex_wait              | sys_futex_wait              |
 | 456                | futex_requeue           | sys_futex_requeue           |
-
 
 
 ## License
