@@ -1,5 +1,5 @@
 CC= gcc
-CFLAGS= -Wall -O0
+CFLAGS= -Wall -O0 -s
 SRCS= inject.c
 TARGET= inject
 
