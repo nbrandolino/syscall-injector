@@ -2,7 +2,7 @@
 
 ## About
 
-Written in C, this program allows a super-user to inject various syscalls into running Linux services. This is done to test how services and binaries react.
+Written in C, this program allows a super-user to inject any type of Linux system call into any running process. This is done to test how systems and their services react.
 
 
 Requirements
@@ -27,7 +27,7 @@ Options
 
 Linux Syscall Table
 -------------------
-| **Syscall Number** | **Name**                | **Entry Point**             |
+| **System Call #** | **Name**                | **Entry Point**             |
 |--------------------|-------------------------|-----------------------------|
 | 0                  | read                    | sys_read                    |
 | 1                  | write                   | sys_write                   |
