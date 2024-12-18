@@ -18,7 +18,7 @@ Compile and Install
 
 Quick Start
 -----------
-    $ ./inject <pid> <syscall_number>
+    $ sudo ./inject <pid> <syscall #>
 
 
 Options
