@@ -29,7 +29,7 @@ void showHelp() {
     printf("\n");
     printf("Arguments:\n");
     printf("    <pid>                       The process ID of the target process.\n");
-    printf("    <syscall_number>            The syscall number to inject into the process.\n");
+    printf("    <syscall_number>            The system call number to inject into the process.\n");
     printf("\n");
     printf("Example:\n");
     printf("    $ %s 1234 60\n", NAME);

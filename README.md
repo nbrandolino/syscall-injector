@@ -41,7 +41,7 @@ Help
 
     Arguments:
         <pid>                       The process ID of the target process.
-        <syscall_number>            The syscall number to inject into the process.
+        <syscall_number>            The system call number to inject into the process.
     Example:
         $ inject 1234 60
 
