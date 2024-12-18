@@ -5,10 +5,6 @@
 Written in C, this program allows a super-user to inject any type of Linux system call into any running process. This is done to test how systems and their services react.
 
 
-Requirements
-------------
-
-
 Compile and Install
 -------------------
     $ cd ./syscall-injector
