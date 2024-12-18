@@ -5,6 +5,12 @@
 Written in C, inject is a command-line utility that attaches to a target process and injects a specific system call. This tool is designed for debugging, testing, or educational purposes to demonstrate the interaction between user-level programs and the kernel via system calls.
 
 
+## Features
+
+- Attach to a running process using its PID.
+- Inject a specified system call into the target process.
+
+
 Compile and Install
 -------------------
     $ cd ./syscall-injector
