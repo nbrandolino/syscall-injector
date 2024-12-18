@@ -107,16 +107,19 @@ int main(int argc, char *argv[]) {
     pid_t targetPid = atoi(argv[1]);
     long syscallNumber = atol(argv[2]);
 
+    // check to see if pid is less than 0
     if (targetPid <= 0) {
         fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid PID: %s\n", argv[1]);
         exit(EXIT_FAILURE);
     }
 
+    // check to see if syscall number is greater than 0 and less than 456
     if (syscallNumber <= 0 || syscallNumber >= 456) {
         fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %s\n", argv[2]);
         exit(EXIT_FAILURE);
     }
 
+    // call injectSyscall function
     printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call %ld into process %d...\n", syscallNumber, targetPid);
     injectSyscall(targetPid, syscallNumber);
 
