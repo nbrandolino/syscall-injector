@@ -11,6 +11,15 @@ Written in C, inject is a command-line utility that attaches to a target process
 - Inject a specified system call into the target process.
 
 
+## Prerequisites
+
+This tool requires the following to run:
+
+- Linux-based operating system.
+- GCC.
+- Root or appropriate permissions to use `ptrace`.
+
+
 Compile and Install
 -------------------
     $ cd ./syscall-injector
