@@ -1,8 +1,32 @@
-# Grub Themes and Files
+# Syscall Injector
 
 ## About
 
-This repository holds my custom grub theme and various grub files.
+Written in C, this program allows a super-user to inject various syscalls into running Linux services. This is done to test how services and binaries react.
+
+
+Requirements
+------------
+
+
+Compile and Install
+-------------------
+    $ cd ./syscall-injector
+    $ make
+    $ sudo make install
+
+
+Quick Start
+-----------
+    $ inject [-h] [-v]
+
+
+Options
+-------
+
+
+Extra Information
+-----------------
 
 
 ## License
