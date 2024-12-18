@@ -425,6 +425,11 @@ Linux Syscall Table
 | 456                | futex_requeue           | sys_futex_requeue           |
 
 
+## Additional information
+- The make file is written to allow for static compiling of the program.
+    - Statically compile by `$ make static`
+
+
 ## Limitations
 - This tool is designed for educational and debugging purposes only. Use responsibly.
 - Using `ptrace` can interfere with the target process's execution and stability.
