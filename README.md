@@ -2,7 +2,7 @@
 
 ## About
 
-Written in C, this program allows a super-user to inject any type of Linux system call into any running process. This is done to test how systems and their services react.
+Written in C, inject is a command-line utility that attaches to a target process and injects a specific system call. This tool is designed for debugging, testing, or educational purposes to demonstrate the interaction between user-level programs and the kernel via system calls.
 
 
 Compile and Install
