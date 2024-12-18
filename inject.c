@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 
+// define software and version name
+#define NAME "inject"
+#define VERSION "1.0"
+
 // error checking macro
 #define CHECKERROR(cond, msg) \
     if (cond) { perror(msg); exit(EXIT_FAILURE); }
@@ -16,7 +20,7 @@
 
 // display help information
 void showHelp() {
-    printf("Usage: inject [options] <pid> <syscall_number>\n");
+    printf("Usage: %s [options] <pid> <syscall_number>\n", NAME);
     printf("\n");
     printf("Options:\n");
     printf("    -h, --help              Display this help message.\n");
@@ -27,14 +31,14 @@ void showHelp() {
     printf("    <syscall_number>        The syscall number to inject into the process.\n");
     printf("\n");
     printf("Example:\n");
-    printf("    $ inject 1234 60\n");
+    printf("    $ %s 1234 60\n", NAME);
     exit(EXIT_SUCCESS);
 }
 
 
 // display version information
 void showVersion() {
-    printf("Linux Syscall Injector Version 1.0\n");
+    printf("%s Version %s\n", NAME, VERSION);
     printf("Licensed under the terms of the GNU General Public License.\n");
     exit(EXIT_SUCCESS);
 }
@@ -99,11 +103,17 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    // parse pid and syscall number
     pid_t targetPid = atoi(argv[1]);
     long syscallNumber = atol(argv[2]);
 
-    if (targetPid <= 0 || syscallNumber <= 0) {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid PID or system call number\n");
+    if (targetPid <= 0) {
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid PID: %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    if (syscallNumber < 0) {
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %s\n", argv[2]);
         exit(EXIT_FAILURE);
     }
 
