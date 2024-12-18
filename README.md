@@ -37,7 +37,6 @@ Help
     Options:
         -h, --help                  Display this help message.
         -v, --version               Display version information.
-        -st, --syscall-table        Display system call number table.
 
     Arguments:
         <pid>                       The process ID of the target process.
