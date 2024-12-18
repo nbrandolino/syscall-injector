@@ -27,8 +27,8 @@ Compile and Install
     $ make install
 
 
-Quick Start
------------
+Usage
+-----
     $ inject [options] <pid> <syscall_number>
 
 
@@ -423,6 +423,16 @@ Linux Syscall Table
 | 454                | futex_wake              | sys_futex_wake              |
 | 455                | futex_wait              | sys_futex_wait              |
 | 456                | futex_requeue           | sys_futex_requeue           |
+
+
+## Limitations
+- This tool is designed for educational and debugging purposes only. Use responsibly.
+- Using `ptrace` can interfere with the target process's execution and stability.
+- The tool assumes knowledge of system calls and their effects on processes.
+
+
+## Disclaimer
+This tool modifies running processes, which can lead to unexpected behavior. Use with caution and ensure proper permissions and backups. The author is not responsible for any damage or loss resulting from the use of this tool.
 
 
 ## License
