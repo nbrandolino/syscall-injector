@@ -16,11 +16,21 @@
 
 // display help information
 void showHelp() {
-    printf("Usage: inject [-h] [-v] [pid syscall]\n");
-    printf("-h, --help              show this help message\n");
-    printf("-v, --version           display version information\n");
+    printf("Usage: inject [options] <pid> <syscall_number>\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("    -h, --help              Display this help message.\n");
+    printf("    -v, --version           Display version information.\n");
+    printf("\n");
+    printf("Arguments:\n");
+    printf("    <pid>                   The process ID of the target process.\n");
+    printf("    <syscall_number>        The syscall number to inject into the process.\n");
+    printf("\n");
+    printf("Example:\n");
+    printf("    $ inject 1234 60\n");
     exit(EXIT_SUCCESS);
 }
+
 
 // display version information
 void showVersion() {
@@ -69,7 +79,7 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: inject [-h] [-v] [pid syscall]\n", argv[0]);
+        fprintf(stderr, "Usage: inject [options] <pid> <syscall_number>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -84,7 +94,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc != 3) {
-        fprintf(stderr, "Usage: inject [-h] [-v] [pid syscall]\n", argv[0]);
+        fprintf(stderr, "Usage: inject [options] <pid> <syscall_number>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
