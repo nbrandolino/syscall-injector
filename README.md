@@ -425,7 +425,7 @@ Linux Syscall Table
 | 456                | futex_requeue           | sys_futex_requeue           |
 
 
-## Additional information
+## Additional Information
 - The make file is written to allow for static compiling of the program.
     - Statically compile by `$ make static`
 
