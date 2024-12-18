@@ -48,7 +48,7 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
     // attach to the target process
     CHECKERROR(ptrace(PTRACE_ATTACH, targetPid, NULL, NULL) == -1, "PTRACE_ATTACH");
     waitpid(targetPid, &status, 0);
-    printf("[+] Attached to process %d\n", targetPid);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Attached to process %d\n", targetPid);
 
     // get the current state of the registers
     CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
@@ -59,7 +59,7 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
     regs.rax = syscallNumber;
     regs.rip = regs.rip;
 
-    printf("[+] Injecting syscall number %ld\n", syscallNumber);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call number %ld\n", syscallNumber);
 
     // set the modified registers
     CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &regs) == -1, "PTRACE_SETREGS");
@@ -73,7 +73,7 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
 
     // detach from the process
     CHECKERROR(ptrace(PTRACE_DETACH, targetPid, NULL, NULL) == -1, "PTRACE_DETACH");
-    printf("[+] Detached from process %d\n", targetPid);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Detached from process %d\n", targetPid);
 }
 
 
@@ -102,11 +102,11 @@ int main(int argc, char *argv[]) {
     long syscallNumber = atol(argv[2]);
 
     if (targetPid <= 0 || syscallNumber <= 0) {
-        fprintf(stderr, "Invalid PID or syscall number.\n");
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid PID or system call number\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("[*] Injecting syscall %ld into process %d...\n", syscallNumber, targetPid);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call %ld into process %d...\n", syscallNumber, targetPid);
     injectSyscall(targetPid, syscallNumber);
 
     return 0;
