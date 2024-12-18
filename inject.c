@@ -90,7 +90,7 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
 
     // get the return value from the syscall
     CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
-    printf("Syscall return value: %ld\n", regs.rax);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m System call return value: %ld\n", regs.rax);
 
     // restore the original registers
     CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &original_regs) == -1, "PTRACE_SETREGS");
