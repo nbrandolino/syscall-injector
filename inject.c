@@ -77,6 +77,7 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
 }
 
 
+// main function
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: inject [options] <pid> <syscall_number>\n", argv[0]);
