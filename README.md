@@ -18,13 +18,20 @@ Compile and Install
 
 Quick Start
 -----------
-    $ inject [-h] [-v] [pid syscall]
+    $ inject [options] <pid> <syscall_number>
 
 
-Options
--------
-    -h, --help              show this help message
-    -v, --version           display version information
+Help
+---------------------
+    Options:
+        -h, --help              Display this help message.
+        -v, --version           Display version information.
+
+    Arguments:
+        <pid>                   The process ID of the target process.
+        <syscall_number>        The syscall number to inject into the process.
+    Example:
+        $ inject 1234 60
 
 
 Uninstall
