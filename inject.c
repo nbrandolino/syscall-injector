@@ -13,6 +13,13 @@
 #define CHECKERROR(cond, msg) \
     if (cond) { perror(msg); exit(EXIT_FAILURE); }
 
+// Display version information
+void showVersion() {
+    printf("Syscall Injector Version 1.0\n");
+    printf("Copyright (C) 2024 YourName. All rights reserved.\n");
+    exit(EXIT_SUCCESS);
+}
+
 // attach to a process and inject a syscall
 void injectSyscall(pid_t targetPid, long syscallNumber) {
     struct user_regs_struct regs, original_regs;
@@ -28,9 +35,9 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
     memcpy(&original_regs, &regs, sizeof(struct user_regs_struct));
 
     // modify the registers to inject the syscall
-    regs.orig_rax = syscallNumber;  // specify syscall number
-    regs.rax = syscallNumber;       // holds the syscall number
-    regs.rip = regs.rip;             // ensure rip points to the current instruction
+    regs.orig_rax = syscallNumber;
+    regs.rax = syscallNumber;
+    regs.rip = regs.rip;
 
     printf("[+] Injecting syscall number %ld\n", syscallNumber);
 
@@ -50,6 +57,16 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
 }
 
 int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <pid> <syscallNumber> | -v\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    // Handle the -v flag for version information
+    if (strcmp(argv[1], "-v") == 0) {
+        showVersion();
+    }
+
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <pid> <syscallNumber>\n", argv[0]);
         exit(EXIT_FAILURE);
