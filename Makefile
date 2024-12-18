@@ -7,6 +7,8 @@ DESTDIR = /usr/bin/
 
 all:
 	$(CC) $(SRCS) $(CFLAGS) -o $(TARGET)
+static:
+	$(CC) $(SRCS) $(CFLAGS) -static -o $(TARGET)
 install:
 	@cp -p $(TARGET) $(DESTDIR)$(TARGET)
 uninstall:
