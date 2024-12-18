@@ -25,6 +25,11 @@ Options
 -------
 
 
+Uninstall
+---------
+    $ cd ./syscall-injector
+    $ sudo make uninstall
+
 Linux Syscall Table
 -------------------
 | **System Call #** | **Name**                | **Entry Point**             |
