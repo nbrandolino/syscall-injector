@@ -35,12 +35,13 @@ Usage
 Help
 ---------------------
     Options:
-        -h, --help              Display this help message.
-        -v, --version           Display version information.
+        -h, --help                  Display this help message.
+        -v, --version               Display version information.
+        -st, --syscall-table        Display system call number table.
 
     Arguments:
-        <pid>                   The process ID of the target process.
-        <syscall_number>        The syscall number to inject into the process.
+        <pid>                       The process ID of the target process.
+        <syscall_number>            The syscall number to inject into the process.
     Example:
         $ inject 1234 60
 
