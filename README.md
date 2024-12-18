@@ -24,7 +24,7 @@ Compile and Install
 -------------------
     $ cd ./syscall-injector
     $ make
-    $ sudo make install
+    $ make install
 
 
 Quick Start
@@ -48,7 +48,7 @@ Help
 Uninstall
 ---------
     $ cd ./syscall-injector
-    $ sudo make uninstall
+    $ make uninstall
 
 
 Linux Syscall Table
