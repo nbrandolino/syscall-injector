@@ -27,24 +27,24 @@ void injectSyscall(pid_t targetPid, long syscallNumber) {
     CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
     memcpy(&original_regs, &regs, sizeof(struct user_regs_struct));
 
-    // Modify the registers to inject the syscall
-    regs.orig_rax = syscallNumber;  // Specify the syscall number (e.g., SYS_getpid)
-    regs.rax = syscallNumber;       // rax holds the syscall number
-    regs.rip = regs.rip;             // Ensure RIP points to the current instruction
+    // modify the registers to inject the syscall
+    regs.orig_rax = syscallNumber;  // specify syscall number
+    regs.rax = syscallNumber;       // holds the syscall number
+    regs.rip = regs.rip;             // ensure rip points to the current instruction
 
     printf("[+] Injecting syscall number %ld\n", syscallNumber);
 
-    // Set the modified registers
+    // set the modified registers
     CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &regs) == -1, "PTRACE_SETREGS");
 
-    // Execute the syscall
+    // execute the syscall
     CHECKERROR(ptrace(PTRACE_SYSCALL, targetPid, NULL, NULL) == -1, "PTRACE_SYSCALL");
     waitpid(targetPid, &status, 0);
 
-    // Restore the original registers
+    // restore the original registers
     CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &original_regs) == -1, "PTRACE_SETREGS");
 
-    // Detach from the process
+    // detach from the process
     CHECKERROR(ptrace(PTRACE_DETACH, targetPid, NULL, NULL) == -1, "PTRACE_DETACH");
     printf("[+] Detached from process %d\n", targetPid);
 }
