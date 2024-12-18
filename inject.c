@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (syscallNumber < 0) {
+    if (syscallNumber <= 0 || syscallNumber >= 456) {
         fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %s\n", argv[2]);
         exit(EXIT_FAILURE);
     }
