@@ -20,12 +20,12 @@
 
 // display help information
 void showHelp() {
-    printf("Usage: %s [options] <pid> <syscall_number> | -r <syscall_list>\n", NAME);
+    printf("Usage: %s [options] <pid> <syscall_number> | -m <syscall_list>\n", NAME);
     printf("\n");
     printf("Options:\n");
     printf("    -h, --help                  Display this help message.\n");
     printf("    -v, --version               Display version information.\n");
-    printf("    -r                          Inject multiple syscalls, comma-separated (e.g., \"60,39,1\").\n");
+    printf("    -m, --multiple              Inject multiple system calls, comma-separated (e.g., \"60,39,1\").\n");
     printf("\n");
     printf("Arguments:\n");
     printf("    <pid>                       The process ID of the target process.\n");
@@ -33,7 +33,7 @@ void showHelp() {
     printf("\n");
     printf("Example:\n");
     printf("    $ %s 1234 60\n", NAME);
-    printf("    $ %s -r 1234 60,39,1\n", NAME);
+    printf("    $ %s -m 1234 60,39,1\n", NAME);
     exit(EXIT_SUCCESS);
 }
 
@@ -118,7 +118,7 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
 // main function
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s [options] <pid> <syscall_number> | -r <syscall_list>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [options] <pid> <syscall_number> | -m <syscall_list>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -139,9 +139,9 @@ int main(int argc, char *argv[]) {
     long syscalls[100];
     int syscallCount = 0;
 
-    if (strcmp(argv[1], "-r") == 0) {
+    if (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--multiple") == 0) {
         if (argc != 4) {
-            fprintf(stderr, "Usage: %s -r <pid> <syscall_list>\n", argv[0]);
+            fprintf(stderr, "Usage: %s -m <pid> <syscall_list>\n", argv[0]);
             exit(EXIT_FAILURE);
         }
 

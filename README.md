@@ -37,7 +37,7 @@ Help
     Options:
         -h, --help                  Display this help message.
         -v, --version               Display version information.
-        -r                          Inject multiple system calls, comma-separated (e.g., "60,39,1").
+        -m, --multiple              Inject multiple system calls, comma-separated (e.g., "60,39,1").
 
     Arguments:
         <pid>                       The process ID of the target process.
