@@ -11,7 +11,7 @@
 
 // define software and version name
 #define NAME "inject"
-#define VERSION "1.0"
+#define VERSION "1.1"
 
 // error checking macro
 #define CHECKERROR(cond, msg) \
@@ -25,6 +25,7 @@ void showHelp() {
     printf("Options:\n");
     printf("    -h, --help                  Display this help message.\n");
     printf("    -v, --version               Display version information.\n");
+    printf("    -r                          Inject multiple syscalls, comma-separated (e.g., \"60,39,1\").\n");
     printf("\n");
     printf("Arguments:\n");
     printf("    <pid>                       The process ID of the target process.\n");
@@ -32,6 +33,7 @@ void showHelp() {
     printf("\n");
     printf("Example:\n");
     printf("    $ %s 1234 60\n", NAME);
+    printf("    $ %s -r 1234 60,39,1\n", NAME);
     exit(EXIT_SUCCESS);
 }
 
@@ -47,7 +49,6 @@ void showVersion() {
 // handle signals gracefully
 void handleSignal(int sig) {
     printf("\nCaught signal %d, detaching from the target process...\n", sig);
-    // Detach safely from the target process
     exit(EXIT_FAILURE);
 }
 
@@ -61,94 +62,133 @@ int isProcessRunning(pid_t pid) {
 
 
 // attach to a process and inject a syscall
-void injectSyscall(pid_t targetPid, long syscallNumber) {
+void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
     struct user_regs_struct regs, original_regs;
     int status;
 
     // attach to the target process
     CHECKERROR(ptrace(PTRACE_ATTACH, targetPid, NULL, NULL) == -1, "PTRACE_ATTACH");
     waitpid(targetPid, &status, 0);
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Attached to process %d\n", targetPid);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Attached to process: %d\n", targetPid);
 
     // get the current state of the registers
     CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
     memcpy(&original_regs, &regs, sizeof(struct user_regs_struct));
 
-    // modify the registers to inject the syscall
-    regs.orig_rax = syscallNumber;
-    regs.rax = syscallNumber;
-    regs.rip = regs.rip;
+    // inject each syscall
+    for (int i = 0; i < count; i++) {
+        regs.orig_rax = syscallNumbers[i];
+        regs.rax = syscallNumbers[i];
+        printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call number: %ld\n", syscallNumbers[i]);
 
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call number %ld\n", syscallNumber);
+        // set the modified registers
+        CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &regs) == -1, "PTRACE_SETREGS");
 
-    // set the modified registers
-    CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &regs) == -1, "PTRACE_SETREGS");
+        // execute the syscall
+        CHECKERROR(ptrace(PTRACE_SYSCALL, targetPid, NULL, NULL) == -1, "PTRACE_SYSCALL");
+        waitpid(targetPid, &status, 0);
 
-    // execute the syscall
-    CHECKERROR(ptrace(PTRACE_SYSCALL, targetPid, NULL, NULL) == -1, "PTRACE_SYSCALL");
-    waitpid(targetPid, &status, 0);
-
-    // get the return value from the syscall
-    CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m System call return value: %ld\n", regs.rax);
+        // get the return value from the syscall
+        CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
+        printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m System call return value: %ld\n", regs.rax);
+    }
 
     // restore the original registers
     CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &original_regs) == -1, "PTRACE_SETREGS");
 
     // detach from the process
     CHECKERROR(ptrace(PTRACE_DETACH, targetPid, NULL, NULL) == -1, "PTRACE_DETACH");
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Detached from process %d\n", targetPid);
+    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Detached from process: %d\n", targetPid);
+}
+
+
+// parse syscall list from a comma-separated string
+int parseSyscallList(char *list, long *syscalls, int maxCount) {
+    char *token = strtok(list, ",");
+    int count = 0;
+
+    while (token != NULL && count < maxCount) {
+        syscalls[count++] = strtol(token, NULL, 10);
+        token = strtok(NULL, ",");
+    }
+    return count;
 }
 
 
 // main function
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: inject [options] <pid> <syscall_number>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [options] <pid> <syscall_number> | -r <syscall_list>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
     // handle signals
     signal(SIGINT, handleSignal);
 
-    // call help function if -h is used
+    // call help function
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         showHelp();
     }
 
-    // call version function if -v is used
+    // call version function
     if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
         showVersion();
     }
 
+    pid_t targetPid;
+    long syscalls[100];
+    int syscallCount = 0;
 
-    if (argc != 3) {
-        fprintf(stderr, "Usage: inject [options] <pid> <syscall_number>\n", argv[0]);
-        exit(EXIT_FAILURE);
+    if (strcmp(argv[1], "-r") == 0) {
+        if (argc != 4) {
+            fprintf(stderr, "Usage: %s -r <pid> <syscall_list>\n", argv[0]);
+            exit(EXIT_FAILURE);
+        }
+
+        targetPid = strtol(argv[2], NULL, 10);
+        if (!isProcessRunning(targetPid)) {
+            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Target process with PID %d does not exist.\n", targetPid);
+            exit(EXIT_FAILURE);
+        }
+
+        syscallCount = parseSyscallList(argv[3], syscalls, 100);
+        if (syscallCount <= 0) {
+            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall list: %s\n", argv[3]);
+            exit(EXIT_FAILURE);
+        }
+
+        // Validate syscall numbers
+        for (int i = 0; i < syscallCount; i++) {
+            if (syscalls[i] < 0 || syscalls[i] > 456) {
+                fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %ld (must be between 0 and 456)\n", syscalls[i]);
+                exit(EXIT_FAILURE);
+            }
+        }
+
+    } else {
+        if (argc != 3) {
+            fprintf(stderr, "Usage: %s <pid> <syscall_number>\n", argv[0]);
+            exit(EXIT_FAILURE);
+        }
+
+        targetPid = strtol(argv[1], NULL, 10);
+        syscalls[0] = strtol(argv[2], NULL, 10);
+        syscallCount = 1;
+
+        if (!isProcessRunning(targetPid)) {
+            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Target process with PID %d does not exist.\n", targetPid);
+            exit(EXIT_FAILURE);
+        }
+
+        // Validate single syscall number
+        if (syscalls[0] <= 0 || syscalls[0] > 456) {
+            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %ld (must be between 1 and 456)\n", syscalls[0]);
+            exit(EXIT_FAILURE);
+        }
     }
 
-    // parse pid and syscall number
-    char *endptr;
-    pid_t targetPid = strtol(argv[1], &endptr, 10);
-    if (*endptr != '\0') {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid PID: %s\n", argv[1]);
-        exit(EXIT_FAILURE);
-    }
-    long syscallNumber = strtol(argv[2], &endptr, 10);
-    if (*endptr != '\0' || syscallNumber <= 0 || syscallNumber >= 456) {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %s\n", argv[2]);
-        exit(EXIT_FAILURE);
-    }
-
-    // check if the target process exists
-    if (!isProcessRunning(targetPid)) {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Target process with PID %d does not exist.\n", targetPid);
-        exit(EXIT_FAILURE);
-    }
-
-    // call injectSyscall function
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call %ld into process %d...\n", syscallNumber, targetPid);
-    injectSyscall(targetPid, syscallNumber);
+    // inject syscalls
+    injectSyscall(targetPid, syscalls, syscallCount);
 
     return 0;
 }

@@ -29,7 +29,7 @@ Compile and Install
 
 Usage
 -----
-    $ inject [options] <pid> <syscall_number>
+    $ inject [options] <pid> <syscall_number> | -r <syscall_list>
 
 
 Help
@@ -37,12 +37,15 @@ Help
     Options:
         -h, --help                  Display this help message.
         -v, --version               Display version information.
+        -r                          Inject multiple system calls, comma-separated (e.g., "60,39,1").
 
     Arguments:
         <pid>                       The process ID of the target process.
         <syscall_number>            The system call number to inject into the process.
+
     Example:
         $ inject 1234 60
+        $ inject -r 1234 60,39,1
 
 
 Uninstall
