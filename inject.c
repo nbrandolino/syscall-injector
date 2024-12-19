@@ -20,7 +20,7 @@
 
 // display help information
 void showHelp() {
-    printf("Usage: %s [options] <pid> <syscall_number>\n", NAME);
+    printf("Usage: %s [options] <pid> <syscall_number> | -r <syscall_list>\n", NAME);
     printf("\n");
     printf("Options:\n");
     printf("    -h, --help                  Display this help message.\n");
