@@ -53,13 +53,9 @@ void showVersion() {
 void handleSignal(int sig) {
     printf("\nCaught signal %d, detaching from the target process...\n", sig);
 
-    // Detach the process if it's attached and restore the state if possible
-    // Assuming we are in the global scope where `targetPid` is accessible (or pass it as a parameter)
-    pid_t targetPid = 1234; // This should be tracked globally or passed accordingly
+    // detach the process if it's attached and restore the state if possible
+    pid_t targetPid = 1234;
     ptrace(PTRACE_DETACH, targetPid, NULL, NULL);
-
-    // Optionally, you could restore the original state of registers here if necessary
-
     exit(EXIT_FAILURE);
 }
 
@@ -150,6 +146,7 @@ int main(int argc, char *argv[]) {
     long syscalls[100];
     int syscallCount = 0;
 
+    // use multiple functionality
     if (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--multiple") == 0) {
         if (argc != 4) {
             fprintf(stderr, "Usage: %s -m <pid> <syscall_list>\n", argv[0]);
@@ -168,7 +165,7 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        // Validate syscall numbers
+        // validate syscall numbers
         for (int i = 0; i < syscallCount; i++) {
             if (syscalls[i] < 0 || syscalls[i] > 456) {
                 fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %ld (must be between 0 and 456)\n", syscalls[i]);
@@ -191,7 +188,7 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        // Validate single syscall number
+        // validate single syscall number
         if (syscalls[0] <= 0 || syscalls[0] > 456) {
             fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m-\033[0m\033[1;37m]\033[0m Invalid syscall number: %ld (must be between 1 and 456)\n", syscalls[0]);
             exit(EXIT_FAILURE);
