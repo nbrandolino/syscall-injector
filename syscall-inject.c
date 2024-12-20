@@ -16,7 +16,7 @@
 // error checking macro
 #define CHECKERROR(cond, msg) \
     if (cond) { \
-        fprintf(stderr, "Error: %s failed. errno: %d (%s)\n", msg, errno, strerror(errno)); \
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: %s failed at %s:%d. errno: %d (%s)\n", msg, __FILE__, __LINE__, errno, strerror(errno)); \
         exit(EXIT_FAILURE); \
     }
 
@@ -50,16 +50,9 @@ void showVersion() {
 
 
 // handle signals gracefully
-void handleSignal(int sig) {
+void handleSignal(int sig, pid_t targetPid) {
     printf("\nCaught signal %d, detaching from the target process...\n", sig);
-
-    // Detach the process if it's attached and restore the state if possible
-    // Assuming we are in the global scope where `targetPid` is accessible (or pass it as a parameter)
-    pid_t targetPid = 1234; // This should be tracked globally or passed accordingly
     ptrace(PTRACE_DETACH, targetPid, NULL, NULL);
-
-    // Optionally, you could restore the original state of registers here if necessary
-
     exit(EXIT_FAILURE);
 }
 
@@ -139,8 +132,8 @@ int main(int argc, char *argv[]) {
     }
 
     // handle signals
-    signal(SIGINT, handleSignal);
-    signal(SIGTERM, handleSignal); // handle termination signal
+    signal(SIGINT, (void (*)(int)) handleSignal);
+    signal(SIGTERM, (void (*)(int)) handleSignal);
 
     // call help function
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
