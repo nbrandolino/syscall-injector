@@ -9,9 +9,12 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 
-// define software and version name
+// software and version name
 #define NAME "syscall-inject"
 #define VERSION "1.3"
+
+// global target PID
+pid_t targetPid;
 
 // error checking macro
 #define CHECKERROR(cond, msg) \
@@ -19,7 +22,6 @@
         fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: %s failed at %s:%d. errno: %d (%s)\n", msg, __FILE__, __LINE__, errno, strerror(errno)); \
         exit(EXIT_FAILURE); \
     }
-
 
 // display help information
 void showHelp() {
@@ -40,7 +42,6 @@ void showHelp() {
     exit(EXIT_SUCCESS);
 }
 
-
 // display version information
 void showVersion() {
     printf("%s Version %s\n", NAME, VERSION);
@@ -48,22 +49,55 @@ void showVersion() {
     exit(EXIT_SUCCESS);
 }
 
-
 // handle signals gracefully
-void handleSignal(int sig, pid_t targetPid) {
-    printf("\nCaught signal %d, detaching from the target process...\n", sig);
+void handleSignal(int sig) {
+    printf("\nCaught signal %d, detaching from the target process (PID: %d)...\n", sig, targetPid);
     ptrace(PTRACE_DETACH, targetPid, NULL, NULL);
     exit(EXIT_FAILURE);
 }
 
-
 // verify if a process with the given PID exists
 int isProcessRunning(pid_t pid) {
     char path[256];
-    snprintf(path, sizeof(path), "/proc/%d", pid);
-    return access(path, F_OK) == 0;
+    snprintf(path, sizeof(path), "/proc/%d/status", pid);
+    FILE *file = fopen(path, "r");
+    if (!file) return 0;
+
+    char buf[256];
+    while (fgets(buf, sizeof(buf), file)) {
+        if (strncmp(buf, "State:", 6) == 0) {
+            if (strstr(buf, "Z") != NULL) {
+                fclose(file);
+                return 0;
+            }
+            break;
+        }
+    }
+    fclose(file);
+    return 1;
 }
 
+// validate PID format and existence
+int validatePid(pid_t pid) {
+    if (errno == ERANGE || pid <= 0) {
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid PID format.\n");
+        return 0;
+    }
+    if (!isProcessRunning(pid)) {
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Target process with PID %d does not exist.\n", pid);
+        return 0;
+    }
+    return 1;
+}
+
+// validate syscall number
+int validateSyscallNumber(long syscall) {
+    if (syscall < 0 || syscall > 456) {
+        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall number %ld (must be between 0 and 456).\n", syscall);
+        return 0;
+    }
+    return 1;
+}
 
 // attach to a process and inject a syscall
 void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
@@ -71,12 +105,7 @@ void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
     int status;
 
     // attach to the target process
-    if (ptrace(PTRACE_ATTACH, targetPid, NULL, NULL) == -1) {
-        if (errno == EPERM) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Insufficient permissions to ptrace process %d\n", targetPid);
-        }
-        CHECKERROR(1, "PTRACE_ATTACH");
-    }
+    CHECKERROR(ptrace(PTRACE_ATTACH, targetPid, NULL, NULL) == -1, "PTRACE_ATTACH");
     waitpid(targetPid, &status, 0);
     printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Attached to process: %d\n", targetPid);
 
@@ -110,19 +139,22 @@ void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
     printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Detached from process: %d\n", targetPid);
 }
 
-
 // parse syscall list from a comma-separated string
 int parseSyscallList(char *list, long *syscalls, int maxCount) {
     char *token = strtok(list, ",");
     int count = 0;
 
     while (token != NULL && count < maxCount) {
-        syscalls[count++] = strtol(token, NULL, 10);
+        syscalls[count] = strtol(token, NULL, 10);
+        if (errno == ERANGE) {
+            fprintf(stderr, "Error: Invalid syscall number in list.\n");
+            return count;
+        }
+        count++;
         token = strtok(NULL, ",");
     }
     return count;
 }
-
 
 // main function
 int main(int argc, char *argv[]) {
@@ -132,8 +164,8 @@ int main(int argc, char *argv[]) {
     }
 
     // handle signals
-    signal(SIGINT, (void (*)(int)) handleSignal);
-    signal(SIGTERM, (void (*)(int)) handleSignal);
+    signal(SIGINT, handleSignal);
+    signal(SIGTERM, handleSignal);
 
     // call help function
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
@@ -145,8 +177,7 @@ int main(int argc, char *argv[]) {
         showVersion();
     }
 
-    pid_t targetPid;
-    long syscalls[100];
+    long *syscalls = NULL;
     int syscallCount = 0;
 
     if (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--multiple") == 0) {
@@ -156,15 +187,7 @@ int main(int argc, char *argv[]) {
         }
 
         targetPid = strtol(argv[2], NULL, 10);
-        if (errno == ERANGE || targetPid <= 0) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid PID format.\n");
-            exit(EXIT_FAILURE);
-        }
-
-        if (!isProcessRunning(targetPid)) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Target process with PID %d does not exist.\n", targetPid);
-            exit(EXIT_FAILURE);
-        }
+        if (!validatePid(targetPid)) exit(EXIT_FAILURE);
 
         syscallCount = parseSyscallList(argv[3], syscalls, 100);
         if (syscallCount <= 0) {
@@ -172,12 +195,9 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        // Validate syscall numbers
+        // validate syscall numbers
         for (int i = 0; i < syscallCount; i++) {
-            if (syscalls[i] < 0 || syscalls[i] > 456) {
-                fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall number %ld (must be between 0 and 456).\n", syscalls[i]);
-                exit(EXIT_FAILURE);
-            }
+            if (!validateSyscallNumber(syscalls[i])) exit(EXIT_FAILURE);
         }
 
     } else {
@@ -187,11 +207,9 @@ int main(int argc, char *argv[]) {
         }
 
         targetPid = strtol(argv[1], NULL, 10);
-        if (errno == ERANGE || targetPid <= 0) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid PID format.\n");
-            exit(EXIT_FAILURE);
-        }
+        if (!validatePid(targetPid)) exit(EXIT_FAILURE);
 
+        syscalls = malloc(sizeof(long) * 1);
         syscalls[0] = strtol(argv[2], NULL, 10);
         if (errno == ERANGE || syscalls[0] <= 0) {
             fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall number format.\n");
@@ -199,20 +217,12 @@ int main(int argc, char *argv[]) {
         }
         syscallCount = 1;
 
-        if (!isProcessRunning(targetPid)) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Target process with PID %d does not exist.\n", targetPid);
-            exit(EXIT_FAILURE);
-        }
-
-        // Validate single syscall number
-        if (syscalls[0] < 0 || syscalls[0] > 456) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall number %ld (must be between 1 and 456).\n", syscalls[0]);
-            exit(EXIT_FAILURE);
-        }
+        if (!validateSyscallNumber(syscalls[0])) exit(EXIT_FAILURE);
     }
 
     // inject syscalls
     injectSyscall(targetPid, syscalls, syscallCount);
 
+    free(syscalls);
     return 0;
 }
