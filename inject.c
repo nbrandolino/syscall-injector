@@ -15,7 +15,10 @@
 
 // error checking macro
 #define CHECKERROR(cond, msg) \
-    if (cond) { perror(msg); exit(EXIT_FAILURE); }
+    if (cond) { \
+        fprintf(stderr, "Error: %s failed. errno: %d (%s)\n", msg, errno, strerror(errno)); \
+        exit(EXIT_FAILURE); \
+    }
 
 
 // display help information
@@ -49,6 +52,14 @@ void showVersion() {
 // handle signals gracefully
 void handleSignal(int sig) {
     printf("\nCaught signal %d, detaching from the target process...\n", sig);
+
+    // Detach the process if it's attached and restore the state if possible
+    // Assuming we are in the global scope where `targetPid` is accessible (or pass it as a parameter)
+    pid_t targetPid = 1234; // This should be tracked globally or passed accordingly
+    ptrace(PTRACE_DETACH, targetPid, NULL, NULL);
+
+    // Optionally, you could restore the original state of registers here if necessary
+
     exit(EXIT_FAILURE);
 }
 
