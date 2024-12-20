@@ -29,7 +29,7 @@ Compile and Install
 
 Usage
 -----
-    $ inject [options] <pid> <syscall_number> | -r <syscall_list>
+    $ syscall-inject [options] <pid> <syscall_number> | -r <syscall_list>
 
 
 Help

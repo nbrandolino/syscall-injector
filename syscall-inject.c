@@ -10,8 +10,8 @@
 #include <sys/syscall.h>
 
 // define software and version name
-#define NAME "inject"
-#define VERSION "1.1"
+#define NAME "syscall-inject"
+#define VERSION "1.2"
 
 // error checking macro
 #define CHECKERROR(cond, msg) \
