@@ -192,6 +192,7 @@ int main(int argc, char *argv[]) {
     long *syscalls = NULL;
     int syscallCount = 0;
 
+    // check for multiple syscall injection
     if (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--multiple") == 0) {
         if (argc != 4) {
             LOG_ERROR("Usage: %s -m <pid> <syscall_list>", argv[0]);
@@ -221,13 +222,20 @@ int main(int argc, char *argv[]) {
         targetPid = strtol(argv[1], NULL, 10);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
 
-        syscalls = malloc(sizeof(long) * 1);
+        // dynamically allocate memory for syscalls array
+        syscallCount = 1;
+        syscalls = malloc(sizeof(long) * syscallCount);
+        if (syscalls == NULL) {
+            LOG_ERROR("Memory allocation failed for syscalls.");
+            exit(EXIT_FAILURE);
+        }
+
         syscalls[0] = strtol(argv[2], NULL, 10);
         if (errno == ERANGE || syscalls[0] <= 0) {
             LOG_ERROR("Invalid syscall number format.");
+            free(syscalls);
             exit(EXIT_FAILURE);
         }
-        syscallCount = 1;
 
         if (!validateSyscallNumber(syscalls[0])) exit(EXIT_FAILURE);
     }
@@ -235,6 +243,7 @@ int main(int argc, char *argv[]) {
     // inject syscalls
     injectSyscall(targetPid, syscalls, syscallCount);
 
+    // free dynamically allocated memory
     free(syscalls);
     return 0;
 }
