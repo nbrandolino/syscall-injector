@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <sys/syscall.h>
 #include <stdarg.h>
+#include <signal.h>
 
 // software and version name
 #define NAME "syscall-inject"
@@ -75,13 +76,24 @@ void handleSignal(int sig) {
 int isProcessRunning(pid_t pid) {
     char path[256];
     snprintf(path, sizeof(path), "/proc/%d/status", pid);
+
+    // check if the /proc/<pid>/status file exists and is readable
     FILE *file = fopen(path, "r");
-    if (!file) return 0;
+    if (!file) {
+        if (errno == ENOENT) {
+            LOG_ERROR("Process with PID %d does not exist.", pid);
+        } else {
+            LOG_ERROR("Failed to open /proc/%d/status for PID %d. errno: %d (%s)", pid, pid, errno, strerror(errno));
+        }
+        return 0;
+    }
 
     char buf[256];
     while (fgets(buf, sizeof(buf), file)) {
+        // check if the process is a zombie (state = 'Z')
         if (strncmp(buf, "State:", 6) == 0 && strstr(buf, "Z")) {
             fclose(file);
+            LOG_ERROR("Process with PID %d is in a 'zombie' state.", pid);
             return 0;
         }
     }
@@ -91,12 +103,11 @@ int isProcessRunning(pid_t pid) {
 
 // validate PID format and existence
 int validatePid(pid_t pid) {
-    if (errno == ERANGE || pid <= 0) {
-        LOG_ERROR("Invalid PID format.");
+    if (pid <= 0) {
+        LOG_ERROR("Invalid PID format: %d.", pid);
         return 0;
     }
     if (!isProcessRunning(pid)) {
-        LOG_ERROR("Target process with PID %d does not exist.", pid);
         return 0;
     }
     return 1;
