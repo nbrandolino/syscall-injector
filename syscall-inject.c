@@ -17,7 +17,7 @@
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.5"
+#define VERSION "1.6.1"
 
 // global target PID
 pid_t targetPid;
@@ -225,9 +225,8 @@ void listProcessInfo(pid_t pid) {
     LOG_INFO("Open files for PID %d:", pid);
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_LNK) {
-            char link[256];
-            snprintf(link, sizeof(link), "%s/%s", path, entry->d_name);
-            ssize_t len = readlink(link, link, sizeof(link) - 1);
+            char link[1024];
+            ssize_t len = readlink(path, link, sizeof(link) - 1);
             if (len != -1) {
                 link[len] = '\0';
                 LOG_INFO("  %s -> %s", entry->d_name, link);
@@ -296,7 +295,7 @@ int main(int argc, char *argv[]) {
         showVersion();
     }
 
-    // List process info
+    // list process info
     if (strcmp(argv[1], "-l") == 0 || strcmp(argv[1], "--list") == 0) {
         if (argc != 3) {
             LOG_ERROR("Usage: %s -l <pid>", argv[0]);
