@@ -40,7 +40,7 @@ syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
    syscall-inject -l 1234
    ```
 
-## Building
+## Build and Install
 To build the project, ensure you have `gcc` installed, then compile the code as follows:
 
 ```bash
