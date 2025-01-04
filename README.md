@@ -1,60 +1,57 @@
-# Syscall Injector
-
-## About
-
-Written in C, `syscall-inject` is a command-line utility that attaches to a target process and injects a specific system call. This tool is designed for debugging, testing, or educational purposes to demonstrate the interaction between user-level programs and the kernel via system calls.
+# syscall-inject
+`syscall-inject` is a command-line utility designed for advanced debugging and testing. It allows users to inject system calls into a running process and retrieve information about the process such as open files, memory maps, and environment variables.
 
 ## Features
+- **System Call Injection**: Inject single or multiple system calls into a target process.
+- **Process Information**: List open files, memory maps, and environment variables of a target process.
 
-- Attach to a running process using its PID.
-- Inject a specified system call into the target process.
+## Requirements
+- **Root Privileges**: The tool requires root privileges to operate.
+- **Linux Environment**: Designed to work on Linux-based systems with access to `/proc` filesystem.
 
-## Prerequisites
-
-This tool requires the following to run:
-
-- Linux-based operating system.
-- GCC.
-- Root or appropriate permissions to use `ptrace`.
-
-Compile and Install
--------------------
+## Usage
 ```bash
-$ cd ./syscall-injector
-$ make
-$ make install
+syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
 ```
 
-Usage
------
+### Options:
+- `-h, --help`: Display help information.
+- `-v, --version`: Display version information.
+- `-m, --multiple`: Inject multiple system calls, specified as a comma-separated list (e.g., `"60,39,1"`).
+- `-l, --list`: List open files, memory maps, and environment variables of the target process.
+
+### Arguments:
+- `<pid>`: The process ID of the target process.
+- `<syscall_number>`: The system call number to inject.
+
+### Examples
+1. Inject a single system call (e.g., `60`):
+   ```bash
+   syscall-inject 1234 60
+   ```
+
+2. Inject multiple system calls:
+   ```bash
+   syscall-inject -m 1234 60,39,1
+   ```
+
+3. List process information:
+   ```bash
+   syscall-inject -l 1234
+   ```
+
+## Building
+To build the project, ensure you have `gcc` installed, then compile the code as follows:
+
 ```bash
-$ syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
+cd ./syscall-injector
 ```
-
-Help
----------------------
-    Options:
-        -h, --help                  Display this help message.
-        -v, --version               Display version information.
-        -m, --multiple              Inject multiple system calls, comma-separated (e.g., "60,39,1").
-        -l, --list                  List open files, memory map, and environment variables of the target process.
-
-    Arguments:
-        <pid>                       The process ID of the target process.
-        <syscall_number>            The system call number to inject into the process.
-
-    Example:
-        $ syscall-inject 1234 60
-        $ syscall-inject -m 1234 60,39,1
-        $ syscall-inject -l 1234
-
-Uninstall
----------
 ```bash
-$ cd ./syscall-injector
-$ make uninstall
+make
 ```
-
+```bash
+make install
+```
 
 Linux Syscall Table
 -------------------
@@ -434,35 +431,16 @@ Linux Syscall Table
 - The make file is written to allow for static compiling of the program.
     - Statically compile by `$ make static`
 
-
 ## Limitations
-- This tool is designed for educational and debugging purposes only. Use responsibly.
+- This tool is designed for educational and research purposes only. Use responsibly.
 - Using `ptrace` can interfere with the target process's execution and stability.
 - The tool assumes knowledge of system calls and their effects on processes.
-
 
 ## Disclaimer
 This tool modifies running processes, which can lead to unexpected behavior. Use with caution and ensure proper permissions and backups. The author is not responsible for any damage or loss resulting from the use of this tool.
 
-
 ## License
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-    See './LICENSE' for more information.
-
+This tool is licensed under the GNU General Public License (GPL). See the LICENSE file for more details.
 
 ## Original author
 
