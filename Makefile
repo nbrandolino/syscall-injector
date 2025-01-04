@@ -13,3 +13,5 @@ install:
 	@cp -p $(TARGET) $(DESTDIR)$(TARGET)
 uninstall:
 	@rm -rf $(DESTDIR)$(TARGET)
+clean:
+	@rm -rf $(TARGET)
