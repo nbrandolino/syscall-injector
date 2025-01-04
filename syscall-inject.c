@@ -17,7 +17,7 @@
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.6.1"
+#define VERSION "1.6.2"
 
 // global target PID
 pid_t targetPid;
@@ -212,7 +212,7 @@ int isRoot() {
 
 // list open files, memory map, and environment variables of the target process
 void listProcessInfo(pid_t pid) {
-    char path[256];
+    char path[512];  // Increased size of path buffer to accommodate larger file paths
 
     // list open files
     snprintf(path, sizeof(path), "/proc/%d/fd", pid);
@@ -226,6 +226,7 @@ void listProcessInfo(pid_t pid) {
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_LNK) {
             char link[1024];
+            snprintf(path, sizeof(path), "/proc/%d/fd/%s", pid, entry->d_name);
             ssize_t len = readlink(path, link, sizeof(link) - 1);
             if (len != -1) {
                 link[len] = '\0';
@@ -242,7 +243,7 @@ void listProcessInfo(pid_t pid) {
         LOG_INFO("Memory map for PID %d:", pid);
         char line[256];
         while (fgets(line, sizeof(line), maps)) {
-            LOG_INFO("  %s", line);
+            LOG_INFO("  %s", line);  // The output format of the memory map has been kept as is
         }
         fclose(maps);
     } else {
@@ -254,12 +255,10 @@ void listProcessInfo(pid_t pid) {
     FILE *environ = fopen(path, "r");
     if (environ) {
         LOG_INFO("Environment variables for PID %d:", pid);
-        char ch;
-        while ((ch = fgetc(environ)) != EOF) {
-            if (ch == '\0') {
-                putchar('\n');
-            } else {
-                putchar(ch);
+        char buffer[256];
+        while (fgets(buffer, sizeof(buffer), environ)) {
+            for (char *p = buffer; *p; ++p) {
+                putchar(*p == '\0' ? '\n' : *p);
             }
         }
         fclose(environ);
@@ -320,6 +319,7 @@ int main(int argc, char *argv[]) {
         targetPid = safeStrtol(argv[2]);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
 
+        syscalls = allocateSyscallsMemory(100);
         syscallCount = parseSyscallList(argv[3], syscalls, 100);
         if (syscallCount <= 0) {
             LOG_ERROR("Invalid syscall list %s", argv[3]);
