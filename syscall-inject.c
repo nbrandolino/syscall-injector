@@ -10,10 +10,14 @@
 #include <sys/syscall.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <pwd.h>
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.4"
+#define VERSION "1.5"
 
 // global target PID
 pid_t targetPid;
@@ -47,6 +51,7 @@ void showHelp() {
     printf("    -h, --help                  Display this help message.\n");
     printf("    -v, --version               Display version information.\n");
     printf("    -m, --multiple              Inject multiple system calls, comma-separated (e.g., \"60,39,1\").\n");
+    printf("    -l, --list                  List open files, memory map, and environment variables of the target process.\n");
     printf("\n");
     printf("Arguments:\n");
     printf("    <pid>                       The process ID of the target process.\n");
@@ -55,6 +60,7 @@ void showHelp() {
     printf("Example:\n");
     printf("    $ %s 1234 60\n", NAME);
     printf("    $ %s -m 1234 60,39,1\n", NAME);
+    printf("    $ %s -l 1234\n", NAME);
     exit(EXIT_SUCCESS);
 }
 
@@ -103,7 +109,7 @@ int validatePid(pid_t pid) {
 
 // validate syscall number
 int validateSyscallNumber(long syscall) {
-    const long MAX_SYSCALL_NUMBER = 456;  // This could be dynamic if needed
+    const long MAX_SYSCALL_NUMBER = 456;
     if (syscall < 0 || syscall > MAX_SYSCALL_NUMBER) {
         LOG_ERROR("Invalid syscall number %ld (must be between 0 and %ld).", syscall, MAX_SYSCALL_NUMBER);
         return 0;
@@ -199,6 +205,70 @@ void freeSyscallsMemory(long *syscalls) {
     }
 }
 
+// check if the program has root privileges
+int isRoot() {
+    return geteuid() == 0;
+}
+
+// list open files, memory map, and environment variables of the target process
+void listProcessInfo(pid_t pid) {
+    char path[256];
+
+    // list open files
+    snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+    DIR *dir = opendir(path);
+    if (dir == NULL) {
+        LOG_ERROR("Failed to open /proc/%d/fd", pid);
+        return;
+    }
+    struct dirent *entry;
+    LOG_INFO("Open files for PID %d:", pid);
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_LNK) {
+            char link[256];
+            snprintf(link, sizeof(link), "%s/%s", path, entry->d_name);
+            ssize_t len = readlink(link, link, sizeof(link) - 1);
+            if (len != -1) {
+                link[len] = '\0';
+                LOG_INFO("  %s -> %s", entry->d_name, link);
+            }
+        }
+    }
+    closedir(dir);
+
+    // list memory map
+    snprintf(path, sizeof(path), "/proc/%d/maps", pid);
+    FILE *maps = fopen(path, "r");
+    if (maps) {
+        LOG_INFO("Memory map for PID %d:", pid);
+        char line[256];
+        while (fgets(line, sizeof(line), maps)) {
+            LOG_INFO("  %s", line);
+        }
+        fclose(maps);
+    } else {
+        LOG_ERROR("Failed to open /proc/%d/maps", pid);
+    }
+
+    // list environment variables
+    snprintf(path, sizeof(path), "/proc/%d/environ", pid);
+    FILE *environ = fopen(path, "r");
+    if (environ) {
+        LOG_INFO("Environment variables for PID %d:", pid);
+        char ch;
+        while ((ch = fgetc(environ)) != EOF) {
+            if (ch == '\0') {
+                putchar('\n');
+            } else {
+                putchar(ch);
+            }
+        }
+        fclose(environ);
+    } else {
+        LOG_ERROR("Failed to open /proc/%d/environ", pid);
+    }
+}
+
 // main function
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -210,6 +280,12 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handleSignal);
     signal(SIGTERM, handleSignal);
 
+    // Check if root privileges are required
+    if (!isRoot()) {
+        LOG_ERROR("This operation requires root privileges. Please run as root.");
+        exit(EXIT_FAILURE);
+    }
+
     // call help function
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         showHelp();
@@ -218,6 +294,18 @@ int main(int argc, char *argv[]) {
     // call version function
     if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
         showVersion();
+    }
+
+    // List process info
+    if (strcmp(argv[1], "-l") == 0 || strcmp(argv[1], "--list") == 0) {
+        if (argc != 3) {
+            LOG_ERROR("Usage: %s -l <pid>", argv[0]);
+            exit(EXIT_FAILURE);
+        }
+        targetPid = safeStrtol(argv[2]);
+        if (!validatePid(targetPid)) exit(EXIT_FAILURE);
+        listProcessInfo(targetPid);
+        return 0;
     }
 
     long *syscalls = NULL;
