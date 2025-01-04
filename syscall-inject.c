@@ -17,7 +17,7 @@
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.6.3"
+#define VERSION "1.6.4"
 
 // global target PID
 pid_t targetPid;
@@ -242,6 +242,7 @@ void listProcessInfo(pid_t pid) {
             }
         }
     }
+    printf("\n");
     closedir(dir);
 
     // list memory map
@@ -251,12 +252,14 @@ void listProcessInfo(pid_t pid) {
         LOG_INFO("Memory map for PID %d:", pid);
         char line[256];
         while (fgets(line, sizeof(line), maps)) {
+            line[strcspn(line, "\n")] = '\0';
             LOG_INFO("  %s", line);
         }
         fclose(maps);
     } else {
         LOG_ERROR("Failed to open /proc/%d/maps", pid);
     }
+    printf("\n");
 
     // list environment variables
     snprintf(path, sizeof(path), "/proc/%d/environ", pid);
@@ -273,6 +276,7 @@ void listProcessInfo(pid_t pid) {
     } else {
         LOG_ERROR("Failed to open /proc/%d/environ", pid);
     }
+    printf("\n");
 }
 
 // main function
