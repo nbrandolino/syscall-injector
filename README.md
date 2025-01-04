@@ -440,9 +440,8 @@ Linux Syscall Table
 This tool modifies running processes, which can lead to unexpected behavior. Use with caution and ensure proper permissions and backups. The author is not responsible for any damage or loss resulting from the use of this tool.
 
 ## License
-This tool is licensed under the GNU General Public License (GPL). See the LICENSE file for more details.
+This tool is licensed under the GNU General Public License (GPL). See ./LICENSE for more details.
 
-## Original author
-
-Nick Brandolino aka nbrandolino
+## Contact
+nbrandolino
 nickbrandolino134@gmail.com
