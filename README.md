@@ -44,7 +44,7 @@ Help
 
     Example:
         $ inject 1234 60
-        $ inject -r 1234 60,39,1
+        $ inject -m 1234 60,39,1
 
 Uninstall
 ---------
