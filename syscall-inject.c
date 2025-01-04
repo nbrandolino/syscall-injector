@@ -179,7 +179,7 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
     return count;
 }
 
-// dynamically allocate memory for syscalls
+// dynamically allocate memory for syscalls with proper error checking
 long *allocateSyscallsMemory(int count) {
     long *syscalls = malloc(sizeof(long) * count);
     if (syscalls == NULL) {
@@ -187,6 +187,19 @@ long *allocateSyscallsMemory(int count) {
         exit(EXIT_FAILURE);
     }
     return syscalls;
+}
+
+// safely convert a string to a long integer
+long safeStrtol(const char *str) {
+    char *endptr;
+    long result = strtol(str, &endptr, 10);
+
+    if (*endptr != '\0') {
+        LOG_ERROR("Invalid format: '%s' is not a valid number.", str);
+        exit(EXIT_FAILURE);
+    }
+
+    return result;
 }
 
 // main function
@@ -220,7 +233,7 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        targetPid = strtol(argv[2], NULL, 10);
+        targetPid = safeStrtol(argv[2]);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
 
         syscallCount = parseSyscallList(argv[3], syscalls, 100);
@@ -240,20 +253,14 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        targetPid = strtol(argv[1], NULL, 10);
+        targetPid = safeStrtol(argv[1]);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
 
         // dynamically allocate memory for syscalls array
         syscallCount = 1;
         syscalls = allocateSyscallsMemory(syscallCount);
 
-        syscalls[0] = strtol(argv[2], NULL, 10);
-        if (errno == ERANGE || syscalls[0] <= 0) {
-            LOG_ERROR("Invalid syscall number format.");
-            free(syscalls);
-            exit(EXIT_FAILURE);
-        }
-
+        syscalls[0] = safeStrtol(argv[2]);
         if (!validateSyscallNumber(syscalls[0])) exit(EXIT_FAILURE);
     }
 
