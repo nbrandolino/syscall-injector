@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
+#include <stdarg.h>  // Include for va_list, va_start, va_end
 
 // software and version name
 #define NAME "syscall-inject"
@@ -19,9 +20,23 @@ pid_t targetPid;
 // error checking macro
 #define CHECKERROR(cond, msg) \
     if (cond) { \
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: %s failed at %s:%d. errno: %d (%s)\n", msg, __FILE__, __LINE__, errno, strerror(errno)); \
+        LOG_ERROR("%s failed at %s:%d. errno: %d (%s)", msg, __FILE__, __LINE__, errno, strerror(errno)); \
         exit(EXIT_FAILURE); \
     }
+
+// display error messages with consistent logging
+void logMessage(const char *level, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    printf("\033[1;37m[%s]\033[0m ", level);
+    vprintf(format, args);
+    printf("\n");
+    va_end(args);
+}
+
+#define LOG_ERROR(format, ...) logMessage("\033[1;31mERROR\033[0m", format, ##__VA_ARGS__)
+#define LOG_SUCCESS(format, ...) logMessage("\033[1;32mSUCCESS\033[0m", format, ##__VA_ARGS__)
+#define LOG_INFO(format, ...) logMessage("\033[1;34mINFO\033[0m", format, ##__VA_ARGS__)
 
 // display help information
 void showHelp() {
@@ -44,14 +59,14 @@ void showHelp() {
 
 // display version information
 void showVersion() {
-    printf("%s Version %s\n", NAME, VERSION);
-    printf("Licensed under the terms of the GNU General Public License.\n");
+    LOG_INFO("%s Version %s", NAME, VERSION);
+    LOG_INFO("Licensed under the terms of the GNU General Public License.");
     exit(EXIT_SUCCESS);
 }
 
 // handle signals gracefully
 void handleSignal(int sig) {
-    printf("\nCaught signal %d, detaching from the target process (PID: %d)...\n", sig, targetPid);
+    LOG_INFO("Caught signal %d, detaching from the target process (PID: %d)...", sig, targetPid);
     ptrace(PTRACE_DETACH, targetPid, NULL, NULL);
     exit(EXIT_FAILURE);
 }
@@ -65,12 +80,9 @@ int isProcessRunning(pid_t pid) {
 
     char buf[256];
     while (fgets(buf, sizeof(buf), file)) {
-        if (strncmp(buf, "State:", 6) == 0) {
-            if (strstr(buf, "Z") != NULL) {
-                fclose(file);
-                return 0;
-            }
-            break;
+        if (strncmp(buf, "State:", 6) == 0 && strstr(buf, "Z")) {
+            fclose(file);
+            return 0;
         }
     }
     fclose(file);
@@ -80,11 +92,11 @@ int isProcessRunning(pid_t pid) {
 // validate PID format and existence
 int validatePid(pid_t pid) {
     if (errno == ERANGE || pid <= 0) {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid PID format.\n");
+        LOG_ERROR("Invalid PID format.");
         return 0;
     }
     if (!isProcessRunning(pid)) {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Target process with PID %d does not exist.\n", pid);
+        LOG_ERROR("Target process with PID %d does not exist.", pid);
         return 0;
     }
     return 1;
@@ -93,7 +105,7 @@ int validatePid(pid_t pid) {
 // validate syscall number
 int validateSyscallNumber(long syscall) {
     if (syscall < 0 || syscall > 456) {
-        fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall number %ld (must be between 0 and 456).\n", syscall);
+        LOG_ERROR("Invalid syscall number %ld (must be between 0 and 456).", syscall);
         return 0;
     }
     return 1;
@@ -107,7 +119,7 @@ void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
     // attach to the target process
     CHECKERROR(ptrace(PTRACE_ATTACH, targetPid, NULL, NULL) == -1, "PTRACE_ATTACH");
     waitpid(targetPid, &status, 0);
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Attached to process: %d\n", targetPid);
+    LOG_SUCCESS("Attached to process: %d", targetPid);
 
     // get the current state of the registers
     CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
@@ -117,7 +129,7 @@ void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
     for (int i = 0; i < count; i++) {
         regs.orig_rax = syscallNumbers[i];
         regs.rax = syscallNumbers[i];
-        printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Injecting system call number: %ld\n", syscallNumbers[i]);
+        LOG_INFO("Injecting system call number: %ld", syscallNumbers[i]);
 
         // set the modified registers
         CHECKERROR(ptrace(PTRACE_SETREGS, targetPid, NULL, &regs) == -1, "PTRACE_SETREGS");
@@ -128,7 +140,7 @@ void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
 
         // get the return value from the syscall
         CHECKERROR(ptrace(PTRACE_GETREGS, targetPid, NULL, &regs) == -1, "PTRACE_GETREGS");
-        printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m System call return value: %ld\n", regs.rax);
+        LOG_SUCCESS("System call return value: %ld", regs.rax);
     }
 
     // restore the original registers
@@ -136,7 +148,7 @@ void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
 
     // detach from the process
     CHECKERROR(ptrace(PTRACE_DETACH, targetPid, NULL, NULL) == -1, "PTRACE_DETACH");
-    printf("\033[1;37m[\033[0m\033[1;32m+\033[0m\033[1;37m]\033[0m Detached from process: %d\n", targetPid);
+    LOG_SUCCESS("Detached from process: %d", targetPid);
 }
 
 // parse syscall list from a comma-separated string
@@ -147,7 +159,7 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
     while (token != NULL && count < maxCount) {
         syscalls[count] = strtol(token, NULL, 10);
         if (errno == ERANGE) {
-            fprintf(stderr, "Error: Invalid syscall number in list.\n");
+            LOG_ERROR("Invalid syscall number in list.");
             return count;
         }
         count++;
@@ -159,7 +171,7 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
 // main function
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s [options] <pid> <syscall_number> | -m <syscall_list>\n", argv[0]);
+        LOG_ERROR("Insufficient arguments. Use -h for help.");
         exit(EXIT_FAILURE);
     }
 
@@ -182,7 +194,7 @@ int main(int argc, char *argv[]) {
 
     if (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--multiple") == 0) {
         if (argc != 4) {
-            fprintf(stderr, "Usage: %s -m <pid> <syscall_list>\n", argv[0]);
+            LOG_ERROR("Usage: %s -m <pid> <syscall_list>", argv[0]);
             exit(EXIT_FAILURE);
         }
 
@@ -191,7 +203,7 @@ int main(int argc, char *argv[]) {
 
         syscallCount = parseSyscallList(argv[3], syscalls, 100);
         if (syscallCount <= 0) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall list %s\n", argv[3]);
+            LOG_ERROR("Invalid syscall list %s", argv[3]);
             exit(EXIT_FAILURE);
         }
 
@@ -202,7 +214,7 @@ int main(int argc, char *argv[]) {
 
     } else {
         if (argc != 3) {
-            fprintf(stderr, "Usage: %s <pid> <syscall_number>\n", argv[0]);
+            LOG_ERROR("Usage: %s <pid> <syscall_number>", argv[0]);
             exit(EXIT_FAILURE);
         }
 
@@ -212,7 +224,7 @@ int main(int argc, char *argv[]) {
         syscalls = malloc(sizeof(long) * 1);
         syscalls[0] = strtol(argv[2], NULL, 10);
         if (errno == ERANGE || syscalls[0] <= 0) {
-            fprintf(stderr, "\033[1;37m[\033[0m\033[1;31m!\033[0m\033[1;37m]\033[0m Error: Invalid syscall number format.\n");
+            LOG_ERROR("Invalid syscall number format.");
             exit(EXIT_FAILURE);
         }
         syscallCount = 1;
