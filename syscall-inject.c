@@ -168,6 +168,16 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
     return count;
 }
 
+// dynamically allocate memory for syscalls
+long *allocateSyscallsMemory(int count) {
+    long *syscalls = malloc(sizeof(long) * count);
+    if (syscalls == NULL) {
+        LOG_ERROR("Memory allocation failed for syscalls.");
+        exit(EXIT_FAILURE);
+    }
+    return syscalls;
+}
+
 // main function
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -224,11 +234,7 @@ int main(int argc, char *argv[]) {
 
         // dynamically allocate memory for syscalls array
         syscallCount = 1;
-        syscalls = malloc(sizeof(long) * syscallCount);
-        if (syscalls == NULL) {
-            LOG_ERROR("Memory allocation failed for syscalls.");
-            exit(EXIT_FAILURE);
-        }
+        syscalls = allocateSyscallsMemory(syscallCount);
 
         syscalls[0] = strtol(argv[2], NULL, 10);
         if (errno == ERANGE || syscalls[0] <= 0) {
