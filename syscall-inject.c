@@ -17,16 +17,17 @@
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.6.2"
+#define VERSION "1.6.3"
 
 // global target PID
 pid_t targetPid;
+long *syscalls = NULL;
 
 // error checking macro
 #define CHECKERROR(cond, msg) \
     if (cond) { \
-        LOG_ERROR("%s failed at %s:%d. errno: %d (%s)", msg, __FILE__, __LINE__, errno, strerror(errno)); \
-        exit(EXIT_FAILURE); \
+        LOG_ERROR("%s failed at %s:%d with errno %d: %s", msg, __FILE__, __LINE__, errno, strerror(errno)); \
+        return; \
     }
 
 // display error messages with consistent logging
@@ -42,6 +43,9 @@ void logMessage(const char *level, const char *format, ...) {
 #define LOG_ERROR(format, ...) logMessage("\033[1;31mERROR\033[0m", format, ##__VA_ARGS__)
 #define LOG_SUCCESS(format, ...) logMessage("\033[1;32mSUCCESS\033[0m", format, ##__VA_ARGS__)
 #define LOG_INFO(format, ...) logMessage("\033[1;34mINFO\033[0m", format, ##__VA_ARGS__)
+
+// function prototype for freeSyscallsMemory
+void freeSyscallsMemory(long *syscalls);
 
 // display help information
 void showHelp() {
@@ -78,6 +82,10 @@ void handleSignal(int sig) {
         LOG_ERROR("Failed to detach from PID %d. errno: %d (%s)", targetPid, errno, strerror(errno));
     } else {
         LOG_SUCCESS("Detached from process %d", targetPid);
+    }
+    // perform cleanup before exiting to avoid memory leaks
+    if (syscalls != NULL) {
+        freeSyscallsMemory(syscalls);
     }
     exit(EXIT_FAILURE);
 }
@@ -277,8 +285,11 @@ int main(int argc, char *argv[]) {
     // handle signals
     signal(SIGINT, handleSignal);
     signal(SIGTERM, handleSignal);
+    signal(SIGSEGV, handleSignal);
+    signal(SIGBUS, handleSignal);
+    signal(SIGILL, handleSignal);
 
-    // Check if root privileges are required
+    // check if root privileges are required
     if (!isRoot()) {
         LOG_ERROR("This operation requires root privileges. Please run as root.");
         exit(EXIT_FAILURE);
@@ -306,44 +317,26 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    long *syscalls = NULL;
     int syscallCount = 0;
 
     // check for multiple syscall injection
     if (strcmp(argv[1], "-m") == 0 || strcmp(argv[1], "--multiple") == 0) {
         if (argc != 4) {
-            LOG_ERROR("Usage: %s -m <pid> <syscall_list>", argv[0]);
+            LOG_ERROR("Usage: %s -m <syscall_list>", argv[0]);
             exit(EXIT_FAILURE);
         }
-
         targetPid = safeStrtol(argv[2]);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
-
-        syscalls = allocateSyscallsMemory(100);
-        syscallCount = parseSyscallList(argv[3], syscalls, 100);
-        if (syscallCount <= 0) {
-            LOG_ERROR("Invalid syscall list %s", argv[3]);
-            exit(EXIT_FAILURE);
-        }
-
-        // validate syscall numbers
-        for (int i = 0; i < syscallCount; i++) {
-            if (!validateSyscallNumber(syscalls[i])) exit(EXIT_FAILURE);
-        }
-
+        syscallCount = parseSyscallList(argv[3], syscalls, 128);
     } else {
         if (argc != 3) {
             LOG_ERROR("Usage: %s <pid> <syscall_number>", argv[0]);
             exit(EXIT_FAILURE);
         }
-
         targetPid = safeStrtol(argv[1]);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
-
-        // dynamically allocate memory for syscalls array
         syscallCount = 1;
-        syscalls = allocateSyscallsMemory(syscallCount);
-
+        syscalls = allocateSyscallsMemory(1);
         syscalls[0] = safeStrtol(argv[2]);
         if (!validateSyscallNumber(syscalls[0])) exit(EXIT_FAILURE);
     }
@@ -351,7 +344,7 @@ int main(int argc, char *argv[]) {
     // inject syscalls
     injectSyscall(targetPid, syscalls, syscallCount);
 
-    // free dynamically allocated memory
+    // free allocated memory
     freeSyscallsMemory(syscalls);
     return 0;
 }
