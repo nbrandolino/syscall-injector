@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
-#include <stdarg.h>  // Include for va_list, va_start, va_end
+#include <stdarg.h>
 
 // software and version name
 #define NAME "syscall-inject"
