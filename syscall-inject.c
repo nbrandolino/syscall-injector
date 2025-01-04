@@ -13,7 +13,7 @@
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.3"
+#define VERSION "1.4"
 
 // global target PID
 pid_t targetPid;
@@ -68,36 +68,24 @@ void showVersion() {
 // handle signals gracefully
 void handleSignal(int sig) {
     LOG_INFO("Caught signal %d, detaching from the target process (PID: %d)...", sig, targetPid);
-    ptrace(PTRACE_DETACH, targetPid, NULL, NULL);
+    if (ptrace(PTRACE_DETACH, targetPid, NULL, NULL) == -1) {
+        LOG_ERROR("Failed to detach from PID %d. errno: %d (%s)", targetPid, errno, strerror(errno));
+    } else {
+        LOG_SUCCESS("Detached from process %d", targetPid);
+    }
     exit(EXIT_FAILURE);
 }
 
 // verify if a process with the given PID exists
 int isProcessRunning(pid_t pid) {
-    char path[256];
-    snprintf(path, sizeof(path), "/proc/%d/status", pid);
-
-    // check if the /proc/<pid>/status file exists and is readable
-    FILE *file = fopen(path, "r");
-    if (!file) {
-        if (errno == ENOENT) {
+    if (kill(pid, 0) == -1) {
+        if (errno == ESRCH) {
             LOG_ERROR("Process with PID %d does not exist.", pid);
         } else {
-            LOG_ERROR("Failed to open /proc/%d/status for PID %d. errno: %d (%s)", pid, pid, errno, strerror(errno));
+            LOG_ERROR("Failed to check existence of PID %d. errno: %d (%s)", pid, errno, strerror(errno));
         }
         return 0;
     }
-
-    char buf[256];
-    while (fgets(buf, sizeof(buf), file)) {
-        // check if the process is a zombie (state = 'Z')
-        if (strncmp(buf, "State:", 6) == 0 && strstr(buf, "Z")) {
-            fclose(file);
-            LOG_ERROR("Process with PID %d is in a 'zombie' state.", pid);
-            return 0;
-        }
-    }
-    fclose(file);
     return 1;
 }
 
@@ -115,8 +103,9 @@ int validatePid(pid_t pid) {
 
 // validate syscall number
 int validateSyscallNumber(long syscall) {
-    if (syscall < 0 || syscall > 456) {
-        LOG_ERROR("Invalid syscall number %ld (must be between 0 and 456).", syscall);
+    const long MAX_SYSCALL_NUMBER = 456;  // This could be dynamic if needed
+    if (syscall < 0 || syscall > MAX_SYSCALL_NUMBER) {
+        LOG_ERROR("Invalid syscall number %ld (must be between 0 and %ld).", syscall, MAX_SYSCALL_NUMBER);
         return 0;
     }
     return 1;
@@ -168,10 +157,11 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
     int count = 0;
 
     while (token != NULL && count < maxCount) {
-        syscalls[count] = strtol(token, NULL, 10);
-        if (errno == ERANGE) {
-            LOG_ERROR("Invalid syscall number in list.");
-            return count;
+        char *endptr;
+        syscalls[count] = strtol(token, &endptr, 10);
+        if (*endptr != '\0') {
+            LOG_ERROR("Invalid syscall number in list: '%s'.", token);
+            return count;  // early exit on error
         }
         count++;
         token = strtok(NULL, ",");
@@ -200,6 +190,13 @@ long safeStrtol(const char *str) {
     }
 
     return result;
+}
+
+// free dynamically allocated memory for syscalls
+void freeSyscallsMemory(long *syscalls) {
+    if (syscalls != NULL) {
+        free(syscalls);
+    }
 }
 
 // main function
@@ -268,6 +265,6 @@ int main(int argc, char *argv[]) {
     injectSyscall(targetPid, syscalls, syscallCount);
 
     // free dynamically allocated memory
-    free(syscalls);
+    freeSyscallsMemory(syscalls);
     return 0;
 }
