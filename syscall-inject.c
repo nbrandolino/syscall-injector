@@ -167,7 +167,7 @@ int parseSyscallList(char *list, long *syscalls, int maxCount) {
         syscalls[count] = strtol(token, &endptr, 10);
         if (*endptr != '\0') {
             LOG_ERROR("Invalid syscall number in list: '%s'.", token);
-            return count;  // early exit on error
+            return count;
         }
         count++;
         token = strtok(NULL, ",");
@@ -212,7 +212,7 @@ int isRoot() {
 
 // list open files, memory map, and environment variables of the target process
 void listProcessInfo(pid_t pid) {
-    char path[512];  // Increased size of path buffer to accommodate larger file paths
+    char path[512];
 
     // list open files
     snprintf(path, sizeof(path), "/proc/%d/fd", pid);
@@ -243,7 +243,7 @@ void listProcessInfo(pid_t pid) {
         LOG_INFO("Memory map for PID %d:", pid);
         char line[256];
         while (fgets(line, sizeof(line), maps)) {
-            LOG_INFO("  %s", line);  // The output format of the memory map has been kept as is
+            LOG_INFO("  %s", line);
         }
         fclose(maps);
     } else {
