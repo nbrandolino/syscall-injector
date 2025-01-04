@@ -4,12 +4,10 @@
 
 Written in C, `syscall-inject` is a command-line utility that attaches to a target process and injects a specific system call. This tool is designed for debugging, testing, or educational purposes to demonstrate the interaction between user-level programs and the kernel via system calls.
 
-
 ## Features
 
 - Attach to a running process using its PID.
 - Inject a specified system call into the target process.
-
 
 ## Prerequisites
 
@@ -19,18 +17,19 @@ This tool requires the following to run:
 - GCC.
 - Root or appropriate permissions to use `ptrace`.
 
-
 Compile and Install
 -------------------
-    $ cd ./syscall-injector
-    $ make
-    $ make install
-
+```bash
+$ cd ./syscall-injector
+$ make
+$ make install
+```
 
 Usage
 -----
-    $ syscall-inject [options] <pid> <syscall_number> | -r <syscall_list>
-
+```bash
+$ syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
+```
 
 Help
 ---------------------
@@ -47,11 +46,12 @@ Help
         $ inject 1234 60
         $ inject -r 1234 60,39,1
 
-
 Uninstall
 ---------
-    $ cd ./syscall-injector
-    $ make uninstall
+```bash
+$ cd ./syscall-injector
+$ make uninstall
+```
 
 
 Linux Syscall Table
