@@ -37,14 +37,16 @@ Help
         -h, --help                  Display this help message.
         -v, --version               Display version information.
         -m, --multiple              Inject multiple system calls, comma-separated (e.g., "60,39,1").
+        -l, --list                  List open files, memory map, and environment variables of the target process.
 
     Arguments:
         <pid>                       The process ID of the target process.
         <syscall_number>            The system call number to inject into the process.
 
     Example:
-        $ inject 1234 60
-        $ inject -m 1234 60,39,1
+        $ syscall-inject 1234 60
+        $ syscall-inject -m 1234 60,39,1
+        $ syscall-inject -l 1234
 
 Uninstall
 ---------
