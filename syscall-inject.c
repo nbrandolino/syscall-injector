@@ -242,7 +242,6 @@ void listProcessInfo(pid_t pid) {
             }
         }
     }
-    printf("\n");
     closedir(dir);
 
     // list memory map
@@ -259,7 +258,6 @@ void listProcessInfo(pid_t pid) {
     } else {
         LOG_ERROR("Failed to open /proc/%d/maps", pid);
     }
-    printf("\n");
 
     // list environment variables
     snprintf(path, sizeof(path), "/proc/%d/environ", pid);
@@ -276,7 +274,6 @@ void listProcessInfo(pid_t pid) {
     } else {
         LOG_ERROR("Failed to open /proc/%d/environ", pid);
     }
-    printf("\n");
 }
 
 // main function
