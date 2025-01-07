@@ -14,10 +14,11 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <pwd.h>
+#include <sys/mman.h>
 
 // software and version name
 #define NAME "syscall-inject"
-#define VERSION "1.6.4"
+#define VERSION "1.6.5"
 
 // global target PID
 pid_t targetPid;
@@ -125,10 +126,39 @@ int validateSyscallNumber(long syscall) {
     return 1;
 }
 
-// attach to a process and inject a syscall
+// anti-debugging
+int isBeingTraced(pid_t pid) {
+    char path[256];
+    snprintf(path, sizeof(path), "/proc/%d/status", pid);
+    FILE *status = fopen(path, "r");
+    if (!status) {
+        LOG_ERROR("Failed to open /proc/%d/status", pid);
+        return 1;
+    }
+    char line[256];
+    while (fgets(line, sizeof(line), status)) {
+        if (strncmp(line, "TracerPid:", 10) == 0) {
+            int tracerPid = atoi(line + 10);
+            if (tracerPid != 0) {
+                fclose(status);
+                return 1;
+            }
+        }
+    }
+    fclose(status);
+    return 0;
+}
+
+// attach to the process, inject syscalls, and then detach
 void injectSyscall(pid_t targetPid, long *syscallNumbers, int count) {
     struct user_regs_struct regs, original_regs;
     int status;
+
+    // check for debugger presence
+    if (isBeingTraced(targetPid)) {
+        LOG_ERROR("Process %d is being traced, aborting syscall injection.", targetPid);
+        return;
+    }
 
     // attach to the target process
     CHECKERROR(ptrace(PTRACE_ATTACH, targetPid, NULL, NULL) == -1, "PTRACE_ATTACH");
@@ -191,19 +221,6 @@ long *allocateSyscallsMemory(int count) {
         exit(EXIT_FAILURE);
     }
     return syscalls;
-}
-
-// safely convert a string to a long integer
-long safeStrtol(const char *str) {
-    char *endptr;
-    long result = strtol(str, &endptr, 10);
-
-    if (*endptr != '\0') {
-        LOG_ERROR("Invalid format: '%s' is not a valid number.", str);
-        exit(EXIT_FAILURE);
-    }
-
-    return result;
 }
 
 // free dynamically allocated memory for syscalls
@@ -312,7 +329,7 @@ int main(int argc, char *argv[]) {
             LOG_ERROR("Usage: %s -l <pid>", argv[0]);
             exit(EXIT_FAILURE);
         }
-        targetPid = safeStrtol(argv[2]);
+        targetPid = strtol(argv[2], NULL, 10);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
         listProcessInfo(targetPid);
         return 0;
@@ -326,7 +343,7 @@ int main(int argc, char *argv[]) {
             LOG_ERROR("Usage: %s -m <syscall_list>", argv[0]);
             exit(EXIT_FAILURE);
         }
-        targetPid = safeStrtol(argv[2]);
+        targetPid = strtol(argv[2], NULL, 10);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
         syscallCount = parseSyscallList(argv[3], syscalls, 128);
     } else {
@@ -334,11 +351,11 @@ int main(int argc, char *argv[]) {
             LOG_ERROR("Usage: %s <pid> <syscall_number>", argv[0]);
             exit(EXIT_FAILURE);
         }
-        targetPid = safeStrtol(argv[1]);
+        targetPid = strtol(argv[1], NULL, 10);
         if (!validatePid(targetPid)) exit(EXIT_FAILURE);
         syscallCount = 1;
         syscalls = allocateSyscallsMemory(1);
-        syscalls[0] = safeStrtol(argv[2]);
+        syscalls[0] = strtol(argv[2], NULL, 10);
         if (!validateSyscallNumber(syscalls[0])) exit(EXIT_FAILURE);
     }
 
