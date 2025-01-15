@@ -11,7 +11,7 @@
 
 ## Usage
 ```bash
-syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
+$ syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
 ```
 
 ### Options:
@@ -27,30 +27,30 @@ syscall-inject [options] <pid> <syscall_number> | -m <syscall_list>
 ### Examples
 1. Inject a single system call (e.g., `60`):
    ```bash
-   syscall-inject 1234 60
+   $ syscall-inject 1234 60
    ```
 
 2. Inject multiple system calls:
    ```bash
-   syscall-inject -m 1234 60,39,1
+   $ syscall-inject -m 1234 60,39,1
    ```
 
 3. List process information:
    ```bash
-   syscall-inject -l 1234
+   $ syscall-inject -l 1234
    ```
 
 ## Build and Install
 To build the project, ensure you have `gcc` installed, then compile the code as follows:
 
 ```bash
-cd ./syscall-injector
+$ cd ./syscall-injector
 ```
 ```bash
-make
+$ make
 ```
 ```bash
-make install
+$ make install
 ```
 
 Linux Syscall Table
